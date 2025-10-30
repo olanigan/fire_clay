@@ -6,16 +6,17 @@ import { OpenAIService } from '../services/openai';
 import { GeminiService } from '../services/gemini';
 
 export class AgentOrchestrator {
-  private firecrawl: FirecrawlService;
+  private firecrawl: FirecrawlService | any;
   private llmService: OpenAIService | GeminiService;
   private providerName: string;
 
   constructor(
     private firecrawlApiKey: string,
     llmService: OpenAIService | GeminiService,
-    providerName: 'openai' | 'gemini' = 'openai'
+    providerName: 'openai' | 'gemini' = 'openai',
+    firecrawlService?: any  // Optional for testing with mocks
   ) {
-    this.firecrawl = new FirecrawlService(firecrawlApiKey);
+    this.firecrawl = firecrawlService || new FirecrawlService(firecrawlApiKey);
     this.llmService = llmService;
     this.providerName = providerName;
     console.log(`[Orchestrator] Initialized with ${providerName.toUpperCase()} provider`);

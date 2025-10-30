@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "tsx tests/e2e/gemini-integration.test.ts",
+    "test:gemini": "tsx tests/e2e/gemini-integration.test.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",
