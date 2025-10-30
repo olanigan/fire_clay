@@ -3,17 +3,22 @@ import { EnrichmentResult, SearchResult, EnrichmentField } from '../types';
 import { parseEmail } from '../strategies/email-parser';
 import { FirecrawlService } from '../services/firecrawl';
 import { OpenAIService } from '../services/openai';
+import { GeminiService } from '../services/gemini';
 
 export class AgentOrchestrator {
   private firecrawl: FirecrawlService;
-  private openai: OpenAIService;
-  
+  private llmService: OpenAIService | GeminiService;
+  private providerName: string;
+
   constructor(
     private firecrawlApiKey: string,
-    private openaiApiKey: string
+    llmService: OpenAIService | GeminiService,
+    providerName: 'openai' | 'gemini' = 'openai'
   ) {
     this.firecrawl = new FirecrawlService(firecrawlApiKey);
-    this.openai = new OpenAIService(openaiApiKey);
+    this.llmService = llmService;
+    this.providerName = providerName;
+    console.log(`[Orchestrator] Initialized with ${providerName.toUpperCase()} provider`);
   }
   
   async enrichRow(
@@ -670,14 +675,14 @@ export class AgentOrchestrator {
     if (companyName && typeof companyName === 'string') enrichmentContext.companyName = companyName;
     if (ctxEmailContext?.companyDomain) enrichmentContext.targetDomain = ctxEmailContext.companyDomain;
     
-    const enrichmentResults = typeof this.openai.extractStructuredDataWithCorroboration === 'function'
-      ? await this.openai.extractStructuredDataWithCorroboration(
+    const enrichmentResults = typeof this.llmService.extractStructuredDataWithCorroboration === 'function'
+      ? await this.llmService.extractStructuredDataWithCorroboration(
           combinedContent,
           fields,
           enrichmentContext,
           onAgentProgress
         )
-      : await this.openai.extractStructuredDataOriginal(
+      : await this.llmService.extractStructuredData(
           combinedContent,
           fields,
           enrichmentContext
@@ -827,14 +832,14 @@ export class AgentOrchestrator {
     if (companyName && typeof companyName === 'string') enrichmentContext.companyName = companyName;
     if (ctxEmailContext?.companyDomain) enrichmentContext.targetDomain = ctxEmailContext.companyDomain;
     
-    const enrichmentResults = typeof this.openai.extractStructuredDataWithCorroboration === 'function'
-      ? await this.openai.extractStructuredDataWithCorroboration(
+    const enrichmentResults = typeof this.llmService.extractStructuredDataWithCorroboration === 'function'
+      ? await this.llmService.extractStructuredDataWithCorroboration(
           combinedContent,
           fields,
           enrichmentContext,
           onAgentProgress
         )
-      : await this.openai.extractStructuredDataOriginal(
+      : await this.llmService.extractStructuredData(
           combinedContent,
           fields,
           enrichmentContext
@@ -982,14 +987,14 @@ export class AgentOrchestrator {
     if (companyName && typeof companyName === 'string') enrichmentContext.companyName = companyName;
     if (ctxEmailContext?.companyDomain) enrichmentContext.targetDomain = ctxEmailContext.companyDomain;
     
-    const enrichmentResults = typeof this.openai.extractStructuredDataWithCorroboration === 'function'
-      ? await this.openai.extractStructuredDataWithCorroboration(
+    const enrichmentResults = typeof this.llmService.extractStructuredDataWithCorroboration === 'function'
+      ? await this.llmService.extractStructuredDataWithCorroboration(
           combinedContent,
           fields,
           enrichmentContext,
           onAgentProgress
         )
-      : await this.openai.extractStructuredDataOriginal(
+      : await this.llmService.extractStructuredData(
           combinedContent,
           fields,
           enrichmentContext
@@ -1241,14 +1246,14 @@ export class AgentOrchestrator {
       enrichmentContext.validGithubUrls = githubResults.map(r => r.url).join(', ');
     }
     
-    const enrichmentResults = typeof this.openai.extractStructuredDataWithCorroboration === 'function'
-      ? await this.openai.extractStructuredDataWithCorroboration(
+    const enrichmentResults = typeof this.llmService.extractStructuredDataWithCorroboration === 'function'
+      ? await this.llmService.extractStructuredDataWithCorroboration(
           combinedContent,
           fields,
           enrichmentContext,
           onAgentProgress
         )
-      : await this.openai.extractStructuredDataOriginal(
+      : await this.llmService.extractStructuredData(
           combinedContent,
           fields,
           enrichmentContext
@@ -1448,14 +1453,14 @@ export class AgentOrchestrator {
       - Only include information that is explicitly stated
       - Do not make assumptions or inferences`;
     
-    const enrichmentResults = typeof this.openai.extractStructuredDataWithCorroboration === 'function'
-      ? await this.openai.extractStructuredDataWithCorroboration(
+    const enrichmentResults = typeof this.llmService.extractStructuredDataWithCorroboration === 'function'
+      ? await this.llmService.extractStructuredDataWithCorroboration(
           combinedContent,
           fields,
           enrichmentContext,
           onAgentProgress
         )
-      : await this.openai.extractStructuredDataOriginal(
+      : await this.llmService.extractStructuredData(
           combinedContent,
           fields,
           enrichmentContext
@@ -2032,7 +2037,7 @@ IMPORTANT: Only extract information that is clearly about the company associated
         }
       });
       
-      const enrichmentResults = await this.openai.extractStructuredDataOriginal(
+      const enrichmentResults = await this.llmService.extractStructuredData(
         fullContent,
         fields,
         stringContext
