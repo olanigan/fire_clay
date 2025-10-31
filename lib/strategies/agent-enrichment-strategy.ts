@@ -1,15 +1,30 @@
 import { AgentOrchestrator } from '../agent-architecture';
 import type { CSVRow, EnrichmentField, RowEnrichmentResult, EnrichmentResult } from '../types';
 import { shouldSkipEmail, loadSkipList, getSkipReason } from '../utils/skip-list';
+import { OpenAIService } from '../services/openai';
+import { GeminiService } from '../services/gemini';
+import { getActiveProvider } from '../config/gemini';
 
 export class AgentEnrichmentStrategy {
   private orchestrator: AgentOrchestrator;
-  
+
   constructor(
     openaiApiKey: string,
     firecrawlApiKey: string,
+    geminiApiKey?: string,
   ) {
-    this.orchestrator = new AgentOrchestrator(firecrawlApiKey, openaiApiKey);
+    // Determine which LLM service to use
+    const activeProvider = getActiveProvider();
+
+    if (activeProvider === 'gemini' && geminiApiKey) {
+      console.log('[AgentEnrichmentStrategy] Using Gemini service');
+      const geminiService = new GeminiService(geminiApiKey);
+      this.orchestrator = new AgentOrchestrator(firecrawlApiKey, geminiService, 'gemini');
+    } else {
+      console.log('[AgentEnrichmentStrategy] Using OpenAI service');
+      const openaiService = new OpenAIService(openaiApiKey);
+      this.orchestrator = new AgentOrchestrator(firecrawlApiKey, openaiService, 'openai');
+    }
   }
   
   async enrichRow(

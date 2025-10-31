@@ -3,6 +3,7 @@ import { AgentEnrichmentStrategy } from '@/lib/strategies/agent-enrichment-strat
 import type { EnrichmentRequest, RowEnrichmentResult } from '@/lib/types';
 import { loadSkipList, shouldSkipEmail, getSkipReason } from '@/lib/utils/skip-list';
 import { ENRICHMENT_CONFIG } from '@/lib/config/enrichment';
+import { getActiveProvider } from '@/lib/config/gemini';
 
 // Use Node.js runtime for better compatibility
 export const runtime = 'nodejs';
@@ -52,26 +53,36 @@ export async function POST(request: NextRequest) {
 
     // Check environment variables and headers for API keys
     const openaiApiKey = process.env.OPENAI_API_KEY || request.headers.get('X-OpenAI-API-Key');
+    const geminiApiKey = process.env.GEMINI_API_KEY || request.headers.get('X-Gemini-API-Key');
     const firecrawlApiKey = process.env.FIRECRAWL_API_KEY || request.headers.get('X-Firecrawl-API-Key');
-    
-    if (!openaiApiKey || !firecrawlApiKey) {
-      console.error('Missing API keys:', { 
-        hasOpenAI: !!openaiApiKey, 
-        hasFirecrawl: !!firecrawlApiKey 
+
+    // Determine active provider
+    const activeProvider = getActiveProvider();
+
+    // Check that we have the required API key for the active provider
+    const hasRequiredLlmKey = activeProvider === 'gemini' ? !!geminiApiKey : !!openaiApiKey;
+
+    if (!hasRequiredLlmKey || !firecrawlApiKey) {
+      console.error('Missing API keys:', {
+        activeProvider,
+        hasOpenAI: !!openaiApiKey,
+        hasGemini: !!geminiApiKey,
+        hasFirecrawl: !!firecrawlApiKey
       });
       return NextResponse.json(
-        { error: 'Server configuration error: Missing API keys' },
+        { error: `Server configuration error: Missing ${activeProvider === 'gemini' ? 'Gemini' : 'OpenAI'} or Firecrawl API key` },
         { status: 500 }
       );
     }
 
     // Always use the advanced agent architecture
     const strategyName = 'AgentEnrichmentStrategy';
-    
-    console.log(`[STRATEGY] Using ${strategyName} - Advanced multi-agent architecture with specialized agents`);
+
+    console.log(`[STRATEGY] Using ${strategyName} with ${activeProvider.toUpperCase()} provider - Advanced multi-agent architecture with specialized agents`);
     const enrichmentStrategy = new AgentEnrichmentStrategy(
-      openaiApiKey,
-      firecrawlApiKey
+      openaiApiKey || '',
+      firecrawlApiKey,
+      geminiApiKey
     );
 
     // Load skip list
